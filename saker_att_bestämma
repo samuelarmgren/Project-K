@@ -1,0 +1,11 @@
+Saker att bestämma
+
+Hur ska label bestämmas?
+hur många tidssteg ska vara i träning/validerings data? 10 just nu
+Vilken loss ska användas? cross entropy loss med weights just nu pga obalanserat dataset
+Hur ska träningsdatan skapas så att alla 3 klasser är med?
+	-modulo
+	-annan slumpmässig algoritm?
+	-i ordning?
+
+hur många samples är nödvändigt?
