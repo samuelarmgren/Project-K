@@ -112,19 +112,6 @@ def label_trajectory(traj, final_steps):
     else:
         return 1  # Stable
 
-    """d12 = dist(bodies[0], bodies[1])
-    d13 = dist(bodies[0], bodies[2])
-    d23 = dist(bodies[1], bodies[2])
-
-    max_dist = max(d12, d13, d23)
-    min_dist = min(d12, d13, d23)
-
-    if max_dist > 5.0:
-        return 2  # Divergent
-    elif min_dist < 0.2:
-        return 0  # Convergent
-    else:
-        return 1  # Stable"""
 
 def generate_dataset(n_samples=10000):
     X = []
@@ -132,8 +119,8 @@ def generate_dataset(n_samples=10000):
     for i in range(n_samples):
         number = random.randint(1, 3)
         energy_choice = {1: "small", 2: "mid", 3: "large"}
-        traj, final_bodies = simulate_three_body_system(energy=energy_choice[number])
-        label = label_trajectory(traj, 20)
+        traj, traj_label, final_bodies = simulate_three_body_system(energy=energy_choice[number])
+        label = label_trajectory(traj_label, 20)
         X.append(traj)
         y.append(label)
     X = np.array(X)  # shape: (N, 10, 12)

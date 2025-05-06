@@ -11,7 +11,6 @@ import seaborn as sns
 X = np.load("X.npy")  # Shape: (N, 10, 12)
 y = np.load("y.npy")  # Shape: (N,)
 
-print(y)
 
 # Normalize features across all samples and timesteps
 X_mean = X.mean(axis=(0, 1), keepdims=True)
@@ -46,12 +45,12 @@ class GRUClassifier(nn.Module):
 # 5. Instantiate model, loss, optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = GRUClassifier().to(device)
-
-criterion = nn.CrossEntropyLoss()
+weights = torch.tensor([24.5, 4.7, 1.34])
+criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 # 6. Training loop
-for epoch in range(1, 1001):
+for epoch in range(1, 101):
     model.train()
     for batch_X, batch_y in train_loader:
         batch_X, batch_y = batch_X.to(device), batch_y.to(device)
@@ -61,7 +60,7 @@ for epoch in range(1, 1001):
         loss.backward()
         optimizer.step()
 
-    if epoch % 100 == 0 or epoch == 1:
+    if epoch % 10 == 0 or epoch == 1:
         model.eval()
         correct = total = 0
         all_preds = [0, 1, 2]
