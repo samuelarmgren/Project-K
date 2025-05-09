@@ -22,7 +22,7 @@ def gravitational_force(b1, b2, G=1.0):
     fy = force * dy / dist
     return fx, fy
 
-def simulate_three_body_system(energy, dt=0.01, steps=10, steps_for_label = 90):
+def simulate_three_body_system(energy, dt=0.01, steps_for_training=10, total_steps = 100):
     # Random initial conditions
     if energy == "small":
         bodies = [
@@ -42,31 +42,9 @@ def simulate_three_body_system(energy, dt=0.01, steps=10, steps_for_label = 90):
                 random.uniform(-5, 5), random.uniform(-5, 5), 1.0)
             for _ in range(3)
         ]
-    trajectory = []
-
-    for _ in range(steps):
-        snapshot = []
-        for b in bodies:
-            snapshot.extend([b.x, b.y, b.vx, b.vy])
-        trajectory.append(snapshot)
-
-        # Compute forces
-        forces = [(0, 0)] * 3
-        for i in range(3):
-            for j in range(3):
-                if i != j:
-                    fx, fy = gravitational_force(bodies[i], bodies[j])
-                    forces[i] = (forces[i][0] + fx, forces[i][1] + fy)
-
-        # Update velocity and position
-        for i, b in enumerate(bodies):
-            fx, fy = forces[i]
-            b.vx += fx / b.mass * dt
-            b.vy += fy / b.mass * dt
-            b.x += b.vx * dt
-            b.y += b.vy * dt
-    final_trajectory = trajectory
-    for _ in range(steps_for_label):
+    
+    final_trajectory = []
+    for step in range(total_steps):
         snapshot = []
         for b in bodies:
             snapshot.extend([b.x, b.y, b.vx, b.vy])
@@ -79,7 +57,7 @@ def simulate_three_body_system(energy, dt=0.01, steps=10, steps_for_label = 90):
                 if i != j:
                     fx, fy = gravitational_force(bodies[i], bodies[j])
                     forces[i] = (forces[i][0] + fx, forces[i][1] + fy)
-
+        
         # Update velocity and position
         for i, b in enumerate(bodies):
             fx, fy = forces[i]
@@ -87,6 +65,8 @@ def simulate_three_body_system(energy, dt=0.01, steps=10, steps_for_label = 90):
             b.vy += fy / b.mass * dt
             b.x += b.vx * dt
             b.y += b.vy * dt
+        if step + 1 == steps_for_training:
+            trajectory = final_trajectory.copy()
 
     return np.array(trajectory), np.array(final_trajectory), bodies 
 
@@ -95,8 +75,7 @@ def label_trajectory(traj, final_steps):
     positions = traj[-final_steps:, [0, 1, 4, 5, 8, 9]]
     max_dist = 0
     min_dist = float("inf")
-    def dist(b1, b2):
-        return math.sqrt((b1.x - b2.x)**2 + (b1.y - b2.y)**2)
+
     for t in range(len(positions)):
         x1, y1, x2, y2, x3, y3 = positions[t]
         d12 = math.hypot(x1 - x2, y1 - y2)

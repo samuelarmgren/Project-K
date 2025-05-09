@@ -45,8 +45,8 @@ class GRUClassifier(nn.Module):
 # 5. Instantiate model, loss, optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = GRUClassifier().to(device)
-weights = torch.tensor([24.5, 4.7, 1.34])
-criterion = nn.CrossEntropyLoss(weight=weights)
+#weights = torch.tensor([770, 45, 1.05])
+criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 # 6. Training loop
@@ -91,7 +91,7 @@ plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.title("Confusion Matrix")
 plt.tight_layout()
-plt.savefig("confusion_matrix.png")
+plt.savefig("confusion_matrix_gru_test.png")
 plt.close()
 
 # 8. Save the model
