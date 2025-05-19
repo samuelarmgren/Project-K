@@ -10,7 +10,7 @@ import seaborn as sns
 # 1. Load and normalize the data
 X = np.load("X.npy")  # Shape: (N, 1000, 12)
 y = np.load("y.npy")  # Shape: (N, 9000, 12)
-y = y[:, :1000, :]
+
 
 # Normalize features across all samples and timesteps
 X_mean = X.mean(axis=(0, 1), keepdims=True)
@@ -25,6 +25,8 @@ y = (y - y_mean) / (y_std + 1e-8)
 X_tensor = torch.tensor(X, dtype=torch.float32)
 y_tensor = torch.tensor(y, dtype=torch.float32)
 
+
+
 # 3. Dataset and DataLoader
 dataset = TensorDataset(X_tensor, y_tensor)
 train_size = int(0.8 * len(dataset))
@@ -34,22 +36,36 @@ train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=64)
 
-# 4. Define LSTM model with Dropout
-class LSTMPredictor(nn.Module):
-    def __init__(self, input_size=12, hidden_size=64, num_layers=1, dropout=0.3, output_seq_len=90):
-        super(LSTMPredictor, self).__init__()
-        self.gru = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
-        self.fc = nn.Linear(hidden_size, input_size)  # output per time step is 12
+# 4. Define Autoregressive encoder-decoder GRU model
+class GRUAutoregressiveDecoder(nn.Module):
+    def __init__(self, input_size=12, hidden_size=64, num_layers=1, dropout=0.3, output_seq_len=9000):
+        super(GRUAutoregressiveDecoder, self).__init__()
+        self.encoder_gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
+        self.decoder_gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
+        self.fc = nn.Linear(hidden_size, input_size)
         self.output_seq_len = output_seq_len
 
     def forward(self, x):
-        out, _ = self.gru(x)
-        return self.fc(out)  # (batch, seq_len, 12)
+        batch_size = x.size(0)
+        _, hidden = self.encoder_gru(x)  # Use last hidden state
+
+        # Start with zeros as first decoder input
+        decoder_input = torch.zeros((batch_size, 1, x.size(2)), device=x.device)
+        outputs = []
+
+        for _ in range(self.output_seq_len):
+            out, hidden = self.decoder_gru(decoder_input, hidden)
+            pred = self.fc(out)  # shape: (batch, 1, input_size)
+            outputs.append(pred)
+            decoder_input = pred  # autoregressive: feed output back as input
+
+        return torch.cat(outputs, dim=1)  # shape: (batch, 9000, input_size)
+
 
 
 # 5. Instantiate model, loss, optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = LSTMPredictor().to(device)
+model = GRUAutoregressiveDecoder().to(device)
 #weights = torch.tensor([770, 45, 1.05])
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -75,6 +91,7 @@ for epoch in range(1, 101):
                 val_loss += criterion(outputs, val_y).item()
         val_loss /= len(val_loader)
         print(f"Epoch {epoch}, Training Loss: {loss.item():.4f}, Val Loss: {val_loss:.4f}")
+
 
 model.eval()
 total_mse = total_mae = 0
