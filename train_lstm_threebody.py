@@ -36,11 +36,11 @@ val_loader = DataLoader(val_dataset, batch_size=64)
 
 # 4. Define LSTM model with Dropout
 class LSTMPredictor(nn.Module):
-    def __init__(self, input_size=12, hidden_size=64, num_layers=1, dropout=0.3, output_seq_len=90):
+    def __init__(self, input_size=12, hidden_size=64, num_layers=2, dropout=0.3):
         super(LSTMPredictor, self).__init__()
         self.gru = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
         self.fc = nn.Linear(hidden_size, input_size)  # output per time step is 12
-        self.output_seq_len = output_seq_len
+        #self.output_seq_len = output_seq_len
 
     def forward(self, x):
         out, _ = self.gru(x)
@@ -100,3 +100,40 @@ avg_r2 = np.mean(r2_scores)
 print(f"\nValidation MSE: {avg_mse:.4f}")
 print(f"Validation MAE: {avg_mae:.4f}")
 print(f"Validation R² Score: {avg_r2:.4f}")
+
+import matplotlib.pyplot as plt
+
+# Hämta en sekvens från valideringsdatan
+val_X_sample, val_y_sample = val_dataset[0]  # eller vilken index du vill
+val_X_sample = val_X_sample.unsqueeze(0).to(device)  # lägg till batch-dimension
+
+# Gör prediktion
+model.eval()
+with torch.no_grad():
+    pred_y_sample = model(val_X_sample).squeeze(0).cpu().numpy()  # (seq_len, 12)
+
+# Avnormalisera både ground truth och prediction
+true_y_sample = val_y_sample.numpy()
+true_y_sample = true_y_sample * (y_std.squeeze()) + y_mean.squeeze()
+pred_y_sample = pred_y_sample * (y_std.squeeze()) + y_mean.squeeze()
+
+# Extrahera t.ex. x- och y-koordinat för kropp 0
+true_x = true_y_sample[:, 0]
+true_y = true_y_sample[:, 1]
+
+pred_x = pred_y_sample[:, 0]
+pred_y = pred_y_sample[:, 1]
+print(len(pred_y))
+print(len(true_y))
+# Plotta
+plt.figure(figsize=(8, 6))
+plt.plot(true_x, true_y, label="Ground truth", linewidth=2)
+plt.plot(pred_x, pred_y, label="Prediction", linestyle='dashed')
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("Trajectory prediction for body 0")
+plt.legend()
+plt.grid(True)
+plt.axis("equal")
+plt.show()
+

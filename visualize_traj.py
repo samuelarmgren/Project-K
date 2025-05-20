@@ -5,8 +5,8 @@ def animate_trajectory(traj, step=5):
     import matplotlib.animation as animation
 
     fig, ax = plt.subplots(figsize=(5, 5), dpi=80)
-    ax.set_xlim(-50, 50)
-    ax.set_ylim(-50, 50)
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-10, 10)
     ax.set_xlabel('X position')
     ax.set_ylabel('Y position')
     ax.set_title('Three-Body Fast Simulation')
@@ -30,10 +30,10 @@ def animate_trajectory(traj, step=5):
 
     total_frames = len(traj) // step
     ani = animation.FuncAnimation(fig, update, frames=total_frames,
-                                  init_func=init, blit=True, interval=20, repeat=False)
+                                  init_func=init, blit=True, interval=200, repeat=False)
     plt.show()
 
 
 
-traj = np.load("example_1.npy") 
-animate_trajectory(traj)
+traj = np.load("y.npy") 
+animate_trajectory(traj[0])
