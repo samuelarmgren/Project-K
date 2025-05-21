@@ -82,7 +82,7 @@ def simulate_three_body_system(dt=0.01, time_for_training=10, total_time=100):
     
     return np.array(full_trajectory)
 
-def generate_dataset(n_samples=1000, dt=0.01, time_for_training=10, total_time=20):
+def generate_dataset(n_samples=1500, dt=0.01, time_for_training=3, total_time=5):
     input_len = int(time_for_training / dt)
     X = []
     y = []
