@@ -14,9 +14,10 @@ def gravitational_force(b1, b2, G=1.0, ignore_radius=0.01, crashed = False):
     dx = b2.x - b1.x
     dy = b2.y - b1.y
     dist_sq = dx**2 + dy**2
-    if dist_sq < ignore_radius**2:
-        return 0.0, 0.0, True
-    dist = math.sqrt(dist_sq + 1e-5)  # avoid exact zero
+    softening = 0.05 
+    dist_sq += softening**2
+    dist = math.sqrt(dist_sq)
+  # avoid exact zero
     force = G * b1.mass * b2.mass / dist_sq
     fx = force * dx / dist
     fy = force * dy / dist
@@ -24,7 +25,6 @@ def gravitational_force(b1, b2, G=1.0, ignore_radius=0.01, crashed = False):
     return fx, fy, crashed
 
 def simulate_three_body_system(dt=0.01, time_for_training=10, total_time=100):
-    dont_add = False
     # Random initial conditions
     bodies = [
         Body(random.uniform(-1.1, -0.9), random.uniform(-1.1, -0.9),
@@ -70,7 +70,7 @@ def simulate_three_body_system(dt=0.01, time_for_training=10, total_time=100):
                 if i != j:
                     fx, fy, crashed = gravitational_force(bodies[i], bodies[j])
                     if crashed:
-                        dont_add = True
+                        
                         break
                     forces[i] = (forces[i][0] + fx, forces[i][1] + fy)
 
@@ -80,9 +80,9 @@ def simulate_three_body_system(dt=0.01, time_for_training=10, total_time=100):
             b.vx += fx / b.mass * dt
             b.vy += fy / b.mass * dt
     
-    return np.array(full_trajectory), dont_add
+    return np.array(full_trajectory)
 
-def generate_dataset(n_samples=1000, dt=0.01, time_for_training=50, total_time=100):
+def generate_dataset(n_samples=1000, dt=0.01, time_for_training=10, total_time=20):
     input_len = int(time_for_training / dt)
     X = []
     y = []
@@ -92,15 +92,15 @@ def generate_dataset(n_samples=1000, dt=0.01, time_for_training=50, total_time=1
         
         if i % 10 == 0:
             print(f"{i} samples have been created")
-        full_traj, dont_add = simulate_three_body_system(dt=dt, time_for_training=time_for_training, total_time=total_time)
+        full_traj = simulate_three_body_system(dt=dt, time_for_training=time_for_training, total_time=total_time)
         if len(full_traj) < shortest:
             shortest = len(full_traj)
             print(shortest)
-        if not dont_add:
-            X.append(full_traj[:input_len])
-            y.append(full_traj[input_len:])
         
-            full_trajs.append(full_traj)
+        X.append(full_traj[:input_len])
+        y.append(full_traj)
+    
+        full_trajs.append(full_traj)
     print(shortest)
     
     X = np.array(X)  # shape: (N, input_len, 12)
