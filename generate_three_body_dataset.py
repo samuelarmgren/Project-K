@@ -10,79 +10,70 @@ class Body:
         self.vy = vy
         self.mass = mass
 
-def gravitational_force(b1, b2, G=1.0, ignore_radius=0.01, crashed = False):
+def gravitational_force(b1, b2, G=1.0, softening=0.05):
     dx = b2.x - b1.x
     dy = b2.y - b1.y
-    dist_sq = dx**2 + dy**2
-    softening = 0.05 
-    dist_sq += softening**2
+    dist_sq = dx**2 + dy**2 + softening**2
     dist = math.sqrt(dist_sq)
-  # avoid exact zero
     force = G * b1.mass * b2.mass / dist_sq
     fx = force * dx / dist
     fy = force * dy / dist
+    return fx, fy
 
-    return fx, fy, crashed
-
-def simulate_three_body_system(dt=0.01, time_for_training=10, total_time=100):
-    # Random initial conditions
+def simulate_three_body_system(dt=0.005, total_time=4):
     bodies = [
-        Body(random.uniform(-1.1, -0.9), random.uniform(-1.1, -0.9),
-             random.uniform(0, 0.05), random.uniform(0, 0.05), 1), 
-        Body(random.uniform(0.9, 1.1), random.uniform(-1.1, -0.9),
-             random.uniform(-0.05, 0), random.uniform(0, 0.05), 1),
-        Body(random.uniform(-0.1, 0.1), random.uniform(0.9, 1.1),
-             random.uniform(-0.05, 0.05), random.uniform(-0.05, 0), 1)
+        Body(random.uniform(-1.0, -0.9), random.uniform(-1.0, -0.9), random.uniform(0, 0.05), random.uniform(0, 0.05), 1),
+        Body(random.uniform(0.9, 1.0), random.uniform(-1.0, -0.9), random.uniform(-0.05, 0), random.uniform(0, 0.05), 1),
+        Body(random.uniform(-0.1, 0.1), random.uniform(0.9, 1.0), random.uniform(-0.05, 0.05), random.uniform(-0.05, 0), 1)
     ]
-    full_trajectory = []
-    # Initial half-step velocity update using initial forces
+
+    total_steps = int(total_time / dt)
+    trajectory = []
+
+    # Initial half-step velocity update
     forces = [(0, 0)] * 3
     for i in range(3):
         for j in range(3):
             if i != j:
-                fx, fy, crashed = gravitational_force(bodies[i], bodies[j])
-                if crashed:
-                    dont_add = True
-                    break
+                fx, fy = gravitational_force(bodies[i], bodies[j])
                 forces[i] = (forces[i][0] + fx, forces[i][1] + fy)
     for i, b in enumerate(bodies):
         fx, fy = forces[i]
         b.vx += 0.5 * fx / b.mass * dt
         b.vy += 0.5 * fy / b.mass * dt
 
-    
-    total_steps = int(total_time / dt)
     for step in range(total_steps):
         snapshot = []
-        for b in bodies:
-            snapshot.extend([b.x, b.y, b.vx, b.vy])
-        full_trajectory.append(snapshot)
+        for i, b in enumerate(bodies):
+            # We’ll store acceleration below after force calculation
+            snapshot.extend([b.x, b.y, b.vx, b.vy])  # position + velocity
 
-        # Position update using half-step velocities
+        # Update positions
         for b in bodies:
             b.x += b.vx * dt
             b.y += b.vy * dt
 
-        # Compute forces at new positions
+        # Recalculate forces and get acceleration
         forces = [(0, 0)] * 3
         for i in range(3):
             for j in range(3):
                 if i != j:
-                    fx, fy, crashed = gravitational_force(bodies[i], bodies[j])
-                    if crashed:
-                        
-                        break
+                    fx, fy = gravitational_force(bodies[i], bodies[j])
                     forces[i] = (forces[i][0] + fx, forces[i][1] + fy)
 
-        # Velocity update to next half-step
         for i, b in enumerate(bodies):
             fx, fy = forces[i]
-            b.vx += fx / b.mass * dt
-            b.vy += fy / b.mass * dt
-    
-    return np.array(full_trajectory)
+            ax = fx / b.mass
+            ay = fy / b.mass
+            #snapshot.extend([ax, ay])
+            b.vx += ax * dt
+            b.vy += ay * dt
 
-def generate_dataset(n_samples=1500, dt=0.01, time_for_training=3, total_time=5):
+        trajectory.append(snapshot)
+
+    return np.array(trajectory)
+
+def generate_dataset(n_samples=1500, dt=0.005, time_for_training=3, total_time=6):
     input_len = int(time_for_training / dt)
     X = []
     y = []
@@ -92,7 +83,7 @@ def generate_dataset(n_samples=1500, dt=0.01, time_for_training=3, total_time=5)
         
         if i % 10 == 0:
             print(f"{i} samples have been created")
-        full_traj = simulate_three_body_system(dt=dt, time_for_training=time_for_training, total_time=total_time)
+        full_traj = simulate_three_body_system(dt=dt, total_time=total_time)
         if len(full_traj) < shortest:
             shortest = len(full_traj)
             print(shortest)
@@ -103,8 +94,8 @@ def generate_dataset(n_samples=1500, dt=0.01, time_for_training=3, total_time=5)
         full_trajs.append(full_traj)
     print(shortest)
     
-    X = np.array(X)  # shape: (N, input_len, 12)
-    y = np.array(y)  # shape: (N, total_len - input_len, 12)
+    X = np.array(X)  # shape: (N, input_len, 18)
+    y = np.array(y)  # shape: (N, total_len - input_len, 18)
     print(X.shape)
     print(y.shape)
     np.save("X.npy", X)
