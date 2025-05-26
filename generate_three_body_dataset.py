@@ -94,8 +94,8 @@ def generate_dataset(n_samples=1500, dt=0.005, time_for_training=3, total_time=6
         full_trajs.append(full_traj)
     print(shortest)
     
-    X = np.array(X)  # shape: (N, input_len, 18)
-    y = np.array(y)  # shape: (N, total_len - input_len, 18)
+    X = np.array(X) 
+    y = np.array(y)  
     print(X.shape)
     print(y.shape)
     np.save("X.npy", X)
