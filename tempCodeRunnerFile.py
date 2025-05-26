@@ -1,1 +1,0 @@
- random.randint(1, 4)
